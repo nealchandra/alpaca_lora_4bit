@@ -27,39 +27,6 @@ class AutogradMatmul4bitNotImplemented(torch.autograd.Function):
 
 
 try:
-    from . import matmul_utils_4bit as mm4b
-
-    class AutogradMatmul4bitCuda(torch.autograd.Function):
-
-        @staticmethod
-        @custom_fwd(cast_inputs=torch.float16)
-        def forward(ctx, x, qweight, scales, zeros, g_idx, bits, maxq):
-            ctx.save_for_backward(qweight, scales, zeros, g_idx)
-            if g_idx is None:
-                output = mm4b._matmul4bit_v1_recons(x, qweight, scales, zeros)
-            else:
-                output = mm4b._matmul4bit_v2_recons(x, qweight, scales, zeros, g_idx)
-            output = output.clone()
-            return output
-
-        @staticmethod
-        @custom_bwd
-        def backward(ctx, grad_output):
-            qweight, scales, zeros, g_idx = ctx.saved_tensors
-            if ctx.needs_input_grad[0]:
-                if g_idx is None:
-                    grad = mm4b._matmul4bit_v1_recons(grad_output, qweight, scales, zeros, transpose=True)
-                else:
-                    grad = mm4b._matmul4bit_v2_recons(grad_output, qweight, scales, zeros, g_idx, transpose=True)
-            return grad, None, None, None, None, None, None
-
-
-    gptq_backend_loaded = True
-except ImportError:
-    print('quant_cuda not found. Please run "pip install alpaca_lora_4bit[cuda]".')
-
-
-try:
     from . import triton_utils as tu
 
 
@@ -96,15 +63,12 @@ def is_triton_backend_available():
 
 
 def is_gptq_backend_available():
-    return 'AutogradMatmul4bitCuda' in globals()
+    return False
 
 
 AutogradMatmul4bit = AutogradMatmul4bitNotImplemented
 backend = None
-if is_gptq_backend_available():
-    AutogradMatmul4bit = AutogradMatmul4bitCuda
-    backend = 'cuda'
-elif is_triton_backend_available():
+if is_triton_backend_available():
     AutogradMatmul4bit = AutogradMatmul4bitTriton
     backend = 'triton'
 else:
@@ -114,13 +78,8 @@ else:
 def switch_backend_to(to_backend):
     global AutogradMatmul4bit
     global backend
-    if to_backend == 'cuda':
-        if not is_gptq_backend_available():
-            raise ValueError('quant_cuda not found. Please reinstall with pip install .')
-        AutogradMatmul4bit = AutogradMatmul4bitCuda
-        backend = 'cuda'
-        print(Style.BRIGHT + Fore.GREEN + 'Using CUDA implementation.')
-    elif to_backend == 'triton':
+
+    if to_backend == 'triton':
         # detect if AutogradMatmul4bitTriton is defined
         if not is_triton_backend_available():
             raise ValueError('Triton not found. Please install triton')
@@ -132,9 +91,7 @@ def switch_backend_to(to_backend):
 
 
 def matmul4bit_with_backend(x, qweight, scales, qzeros, g_idx, bits, maxq):
-    if backend == 'cuda':
-        return mm4b.matmul4bit(x, qweight, scales, qzeros, g_idx)
-    elif backend == 'triton':
+    if backend == 'triton':
         assert qzeros.dtype == torch.int32
         return tu.triton_matmul(x, qweight, scales, qzeros, g_idx, bits, maxq)
     else:
