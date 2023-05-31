@@ -6,4 +6,5 @@ safetensors
 einops
 colorama
 peft @ git+https://github.com/huggingface/peft.git@70af02a2bca5a63921790036b2c9430edf4037e2
-transformers @ git+https://github.com/huggingface/transformers.git
+transformers @ git+https://github.com/huggingface/transformers.git@de9255de27abfcae4a1f816b904915f0b1e23cd9
+
