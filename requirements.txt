@@ -6,5 +6,5 @@ safetensors
 einops
 colorama
 git+https://github.com/huggingface/peft.git@70af02a2bca5a63921790036b2c9430edf4037e2
-git+https://github.com/huggingface/transformers.git
-git+https://github.com/sterlind/GPTQ-for-LLaMa.git@lora_4bit
+git+https://github.com/huggingface/transformers.git@de9255de27abfcae4a1f816b904915f0b1e23cd9
+git+https://github.com/sterlind/GPTQ-for-LLaMa.git@6f4b8b3b5745e9ce78142629f2424a69b8945e84
